@@ -6,7 +6,7 @@ version_echo_module=0.42
 version_eval_module=2011.01.27
 version_set_misc=0.22rc8
 
-default: build
+default: configure build
 
 set_version:
 	@mkdir -p versions current
@@ -14,13 +14,12 @@ set_version:
 	@mkdir -p versions/nginx-${version_nginx}/objs
 	@for i in docs auto conf configure contrib src Makefile objs; do cd current && ln -fs ../versions/nginx-${version_nginx}/$$i && cd ..; done
 	@make ensure_custom_makefile
-	@make config
 	@echo "Using nginx ${version_nginx} version"
 
 ensure_custom_makefile:
 	@if [ ! -f current/CustomMakefile ]; then touch current/CustomMakefile && \
 	echo "default:	build\n\nclean:\n\tfind objs -type f -name *.o -delete\n" >> current/CustomMakefile && \
-	echo "clean-module:\n\trm -f objs/addon/src/*.o\n\nbuild: clean-module\n\t@make -f objs/Makefile\n" >> current/CustomMakefile; \
+	echo "clean-module:\n\trm -f objs/addon/src/ngx_http_redis2*.o\n\nbuild: clean-module\n\t@make -f objs/Makefile\n" >> current/CustomMakefile; \
 	else exit 0; fi  
 
 extra_modules:
@@ -46,10 +45,13 @@ modules := --add-module=../ \
 build: set_version ensure_custom_makefile
 	cd current && make -f CustomMakefile build
 
-clean:
-	cd current && make clean
+clean: set_version ensure_custom_makefile
+	cd current && make -f CustomMakefile clean
 
-configure:
+clean-module: set_version ensure_custom_makefile
+	cd current && make -f CustomMakefile clean-module
+
+configure: set_version extra_modules
 	cd current && LUAJIT_LIB=../versions/LuaJIT-${version_lua_jit}/lib LUAJIT_INC=../versions/LuaJIT-${version_lua_jit}/include/luajit-2.0  \
 	./configure \
 	--with-http_ssl_module \
@@ -63,23 +65,5 @@ config_debug:
 	--with-debug \
 	${modules}
 
-config_alternate:
-	cd current && ./configure \
-	--without-http_auth_basic_module \
-	--without-http_autoindex_module \
-	--without-http_browser_module \
-	--without-http_charset_module \
-	--without-http_empty_gif_module \
-	--without-http_fastcgi_module \
-	--without-http_geo_module \
-	--without-http_referer_module \
-	--without-http_ssi_module \
-	--with-http_flv_module \
-	--without-mail_pop3_module \
-	--without-mail_imap_module \
-	--without-mail_smtp_module \
-	--with-http_stub_status_module \
-	--with-http_ssl_module 
-
-test:
+test: clean-module build
 	@PATH=$$PATH:./current/objs prove -r t
