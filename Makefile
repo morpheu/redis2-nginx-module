@@ -5,6 +5,7 @@ version_lua_jit=2.0.0
 version_echo_module=0.42
 version_eval_module=2011.01.27
 version_set_misc=0.22rc8
+version_pcre=8.10
 
 default: configure build
 
@@ -28,12 +29,14 @@ extra_modules:
 	echo_nginx_module_url="https://github.com/agentzh/echo-nginx-module/archive/v"; \
 	nginx_eval_module_url="https://github.com/agentzh/nginx-eval-module/archive/"; \
 	set_misc_nginx_module_url="https://github.com/agentzh/set-misc-nginx-module/archive/v"; \
-	for module in set_misc_nginx_module:${version_set_misc} nginx_eval_module:${version_eval_module} lua_nginx_module:${version_lua_module} ngx_devel_kit:${version_dev_kit} echo_nginx_module:${version_echo_module}; do \
+	pcre_url="http://downloads.sourceforge.net/pcre/pcre-"; \
+	for module in pcre:${version_pcre} set_misc_nginx_module:${version_set_misc} nginx_eval_module:${version_eval_module} lua_nginx_module:${version_lua_module} ngx_devel_kit:${version_dev_kit} echo_nginx_module:${version_echo_module}; do \
 		module_url=$${module%%:*}_url; \
 		if [ ! -d versions/$${module/:/-} ]; then cd versions; [ ! -f $${module/:/-}.tar.gz ] && wget -c -N $${!module_url}$${module#*:}.tar.gz -O $${module/:/-}.tar.gz ; tar xzf $${module/:/-}.tar.gz; cd ..; fi; \
 	done
 	@if [ ! -d versions/LuaJIT-${version_lua_jit} ]; then cd versions; [ ! -f LuaJIT-${version_lua_jit}.tar.gz ] && wget -c -N http://luajit.org/download/LuaJIT-${version_lua_jit}.tar.gz; tar xzf LuaJIT-${version_lua_jit}.tar.gz; fi;
 	@cd versions/LuaJIT-${version_lua_jit} && sed -i -e "s#^export PREFIX=.*\$$#export PREFIX= $$(pwd)#" Makefile && make && make install && cd .. 
+	@cd versions/pcre-${version_pcre} && ./configure && make
 
 modules := --add-module=../ \
 	--add-module=../versions/ngx_devel_kit-${version_dev_kit} \
@@ -41,6 +44,7 @@ modules := --add-module=../ \
 	--add-module=../versions/echo-nginx-module-${version_echo_module} \
 	--add-module=../versions/nginx-eval-module-${version_eval_module} \
 	--add-module=../versions/set-misc-nginx-module-${version_set_misc} \
+	--with-pcre=../versions/pcre-${version_pcre}
 
 build: set_version ensure_custom_makefile
 	cd current && make -f CustomMakefile build
